@@ -6,7 +6,7 @@
 # extract the latest GSOD data and write out as a csv file for selected stations.
 # Author: Alex Saunders
 # Date created: 17/12/2021
-# Date modified: 17/12/2021
+# Date modified: 20/12/2021
 ################################################################################
 
 
@@ -16,23 +16,19 @@
 
 rm(list=ls())
 
-packages = c("GSODR")
+print(paste0("*** started routine gsod extraction at ",Sys.time(), " ***"))
+
+packages = c("GSODR","lubridate")
 
 for(package in packages){
-  print(paste0('** Loading package: ',package))
   if(!require(package,character.only = TRUE)) {
-    print("*** Package not found... installing")
     install.packages(package)
     if(!require(package,character.only = TRUE)) {
-      print("*** ERROR: Package not found")
     }else{
-      print('*** Package installed')
     }
   }
   library(package,character.only = TRUE)
-  print(paste0('*** Package loaded: ', package))
 }
-print('* END: Loading packages')
 
 # set input path
 input_path <- "C://Users/alexa/Documents/02_work/02_start/02_deliv/01_pk_heat/06_r/01_input/"
@@ -76,10 +72,10 @@ if (nrow(locs_na) > 0) {
   print("warning: one or more stations are not recognised in GSOD")
   print(locs_na[,c("loc","stationid")])
   print("locations to be extracted:")
-  print(locs_ok)
+  print(locs_ok[,c("loc","stationid","NAME")])
 } else {
   print("locations to be extracted:")
-  print(locs_ok)
+  print(locs_ok[,c("loc","stationid","NAME")])
 }
 
 
@@ -93,17 +89,14 @@ if (nrow(locs_na) > 0) {
 lagdays <- 5
 latestyear <- as.integer(format(Sys.Date()-lagdays, "%Y"))
 latestday  <- Sys.Date()-lagdays
+print(paste0("attempting to download data for start of ", latestyear, " to ", latestday))
 gsod_data <- get_GSOD(years = latestyear, station = locs_ok$STNID)
-
-# order by date with most recent first
-gsod_data <- gsod_data[order(gsod_data$YEARMODA, decreasing = T)]
-
 
 # add heatwave variables
 
 # add RH, calculated using Magnus formula
 gsod_data$RH <- round(100 * (exp((a * gsod_data$DEWP) / (b + gsod_data$DEWP))
-                              / exp((a * gsod_data$TEMP) / (b + gsod_data$TEMP))),1)
+                             / exp((a * gsod_data$TEMP) / (b + gsod_data$TEMP))),1)
 
 # add HI, calculated using NOAA formula
 gsod_data$t_fah <- (gsod_data$TEMP * (9/5)) + 32
@@ -120,57 +113,69 @@ gsod_data$hi <- round (
   , 1)
 
 # drop unwanted variables and tidy up column names
-keep <- c("STNID","NAME","CTRY","LATITUDE","LONGITUDE","ELEVATION","BEGIN","END","YEARMODA",
-          "YEAR","MONTH","DAY","YDAY","TEMP","MAX","MIN","DEWP","RH","hi") #"t_fah","hi_fah"
-gsod_data <- gsod_data[, ..keep]
-colnames(gsod_data) <- c("STNID","NAME","CTRY","LATITUDE","LONGITUDE","ELEVATION","BEGIN",
-                         "END","YEARMODA","YEAR","MONTH","DAY","YDAY",
+gsod_data <- merge(locs_ok[,c("STNID","loc","stationid")], gsod_data)
+keep <- c("loc","stationid","NAME","YEARMODA",
+          "TEMP","MAX","MIN","DEWP","RH","hi")
+gsod_data <- gsod_data[, keep]
+colnames(gsod_data) <- c("location","station_id","station_name","date",
                          "t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")
 
-# update END to be correct (in case it contains an older date from the station
-# list database)
-for (STNID in locs_ok$STNID) {
-  enddate <- as.integer(gsub("-","",max(gsod_data$YEARMODA[which(gsod_data$STNID == STNID)])))
-  gsod_data[which(gsod_data$STNID == STNID), "END"] <- enddate
-}
 
+# check for each station that data exists for all days and fill with NAs where 
+# data does not exist
+days <- seq(as.Date(paste0(latestyear,"-01-01")), as.Date(latestday), "days")
+rows_total <- length(days) * length(locs_check$STNID)
+gsod_data_fill <- as.data.frame(matrix(0, ncol = ncol(gsod_data), nrow = rows_total - nrow(gsod_data)))
+colnames(gsod_data_fill) <- colnames(gsod_data)
+class(gsod_data_fill$date) <- "Date"
+i <- 0
 
-# subset to the latest day only
-gsod_data_latestday <- gsod_data[which(gsod_data$YEARMODA == latestday),]
-
-# check that data exists for latest day for all stations and fill with NAs
-# where the data is missing
-gsod_data_latestday <- merge(locs, gsod_data_latestday, by = "STNID", all.x = T, all.y = F)
-
-if (any(is.na(gsod_data_latestday$t_cel))) {
-
-  gsod_data_latestday[, c("YEARMODA","YEAR","MONTH","DAY","YDAY")] <- unique(gsod_data_latestday[!is.na(gsod_data_latestday$t_cel),c("YEARMODA","YEAR","MONTH","DAY","YDAY")])
-  gsod_data_latestday <- gsod_data_latestday[, c("STNID","loc","stationid","NAME.x","CTRY.x","LAT","LON","ELEVATION","BEGIN.x",
-                                                 "END.x","YEARMODA","YEAR","MONTH","DAY","YDAY",
-                                                 "t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")]
-  colnames(gsod_data_latestday) <- c("STNID","loc","stationid","NAME","CTRY","LATITUDE","LONGITUDE","ELEVATION","BEGIN",
-                                     "END","YEARMODA","YEAR","MONTH","DAY","YDAY",
-                                     "t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")
+for (l in 1:length(locs_check$STNID)) {
+  loc <- locs_ok$loc[l]
   
-  # update attributes for stationid (elevation and enddate) which are missing
-  for (STNID in locs_ok$STNID) {
-    gsod_data_latestday[which(gsod_data_latestday$STNID == STNID), "END"] <- unique(gsod_data$END[which(gsod_data$STNID == STNID)])
-    gsod_data_latestday[which(gsod_data_latestday$STNID == STNID), "ELEVATION"] <- unique(gsod_data$ELEVATION[which(gsod_data$STNID == STNID)])
+  for (d in 1:length(days)) {
+    day <- days[d]
+    
+    if (nrow(gsod_data[which(gsod_data$loc == loc 
+                             & gsod_data$date == day),]) < 1) {
+      i <- i+1
+      gsod_data_fill$location[i] <- locs_ok$loc[l]
+      gsod_data_fill$station_id[i] <- locs_ok$stationid[l]
+      gsod_data_fill$station_name[i] <- locs_ok$NAME[l]
+      gsod_data_fill$date[i] <- day
+      gsod_data_fill[i, c("t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")] <- NA
+      
+    }
+    
   }
-
-} else {
-  colnames(gsod_data_latestday) <- c("STNID","loc","stationid","NAME","CTRY","LATITUDE","LONGITUDE","ELEVATION","BEGIN",
-                                     "END","YEARMODA","YEAR","MONTH","DAY","YDAY",
-                                     "t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")
+  
 }
 
-# add flag for missing day of data
-gsod_data_latestday$missingday <- 0
-gsod_data_latestday$missingday[is.na(gsod_data_latestday$t_cel)] <- 1
+# append the days with missing data back to the gsod data and order by date
+gsod_data <- rbind(gsod_data, gsod_data_fill)
+gsod_data <- gsod_data[order(gsod_data$date, decreasing = T),]
 
-# write out the data for the latest day
-write.csv(gsod_data_latestday,paste0(output_path,"gsod_data_latestday_",Sys.Date(),".csv"), row.names = F)
+# add flag for missing day of data and last updated column
+gsod_data$missing <- 0
+gsod_data$missing[is.na(gsod_data$t_cel)] <- 1
+gsod_data$last_updated <- Sys.Date()
 
+
+# write out the data for all days until latest day - overwrites the previous days data
+write.csv(gsod_data, paste0(output_path,"start_gsod_year_to_date.csv"), row.names = F)
+print("latest day data was saved to ", output_path, " at ", Sys.time())
+
+
+# subset to the latest day and write out
+gsod_data_latestday <- gsod_data[which(gsod_data$date == latestday),]
+write.csv(gsod_data_latestday, paste0(output_path,"start_gsod_latest.csv"), row.names = F)
+
+# finish logging
+print(paste0("latest day data was available for ", length(gsod_data_latestday$missing[which(gsod_data_latestday$missing == 0)])," out of total ",length(gsod_data_latestday$missing)," stations"))
+print(paste0("year to date and latest day data were saved to ", output_path))
+print(paste0("***** finished routine gsod extraction at ",Sys.time(), " *****"))
+
+rm(list=ls())
 
 ################################################################################
 # END

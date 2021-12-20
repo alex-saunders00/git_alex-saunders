@@ -95,3 +95,26 @@ Error in `[.data.frame`(gsod_data_latestday, , c("STNID", "loc", "stationid",  :
   undefined columns selected
 Calls: [ -> [.data.frame
 Execution halted
+[1] "** Loading package: GSODR"
+Loading required package: GSODR
+[1] "*** Package loaded: GSODR"
+[1] "* END: Loading packages"
+[1] "locations to be extracted:"
+         STNID       loc   stationid        NAME    LAT    LON CTRY STATE
+1 416400-99999    Lahore 41640099999 LAHORE CITY 31.550 74.333   PK      
+2 416750-99999    Multan 41675099999 MULTAN INTL 30.203 71.419   PK      
+3 416970-99999      Sibi 41697099999        SIBI 29.550 67.883   PK      
+4 417150-99999 Jacobabad 41715099999  SHAHBAZ AB 28.284 68.450   PK      
+5 417490-99999 Nawabshah 41749099999   NAWABSHAH 26.219 68.390   PK      
+6 417800-99999   Karachi 41780099999 JINNAH INTL 24.907 67.161   PK      
+     BEGIN      END COUNTRY_NAME ISO2C ISO3C
+1 19440101 20211212     PAKISTAN    PK   PAK
+2 19440101 20211212     PAKISTAN    PK   PAK
+3 19570201 20211212     PAKISTAN    PK   PAK
+4 19440101 20211212     PAKISTAN    PK   PAK
+5 19550101 20211212     PAKISTAN    PK   PAK
+6 19420506 20211212     PAKISTAN    PK   PAK
+Error in `[.data.frame`(gsod_data_latestday, , c("STNID", "loc", "stationid",  : 
+  undefined columns selected
+Calls: [ -> [.data.frame
+Execution halted
