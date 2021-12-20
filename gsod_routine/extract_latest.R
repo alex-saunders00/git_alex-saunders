@@ -18,7 +18,7 @@ rm(list=ls())
 
 print(paste0("*** started routine gsod extraction at ",Sys.time(), " ***"))
 
-packages = c("GSODR","lubridate")
+packages = c("GSODR","lubridate","googledrive")
 
 for(package in packages){
   if(!require(package,character.only = TRUE)) {
@@ -175,13 +175,24 @@ print(paste0("latest day data was available for ", length(gsod_data_latestday$mi
 print(paste0("year to date and latest day data were saved to ", output_path))
 print(paste0("***** finished routine gsod extraction at ",Sys.time(), " *****"))
 
-rm(list=ls())
+
 
 ################################################################################
-# END
+# Write outputs to Google Drive
 ################################################################################
 
+# upload files to the google drive
+drive_upload(paste0(output_path,"start_gsod_year_to_date.csv"), path = "gsod_routine", name = "start_gsod_year_to_date", type = "spreadsheet", overwrite = T) #type = "text/csv"
+drive_upload(paste0(output_path,"start_gsod_latest.csv"), path = "gsod_routine", name = "start_gsod_latest", type = "spreadsheet", overwrite = T)
+
+# allow access to the files for anyone with the link to the drive location
+drive_share_anyone("start_gsod_year_to_date")
+drive_share_anyone("start_gsod_latest")
 
 
 
+
+################################################################################
+# End
+################################################################################
 

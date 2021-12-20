@@ -43,8 +43,8 @@ script_path <- "C://Users/alexa/Documents/GitHub/git_alex-saunders/gsod_routine/
 ################################################################################
 
 # create the scheduled task to run daily at the specified time
-starttime <- "16:00"
-taskscheduler_create(taskname = "extract_gsod_latest_daily", rscript = paste0(script_path,"extract_latest.R"), 
+starttime <- "18:10"
+taskscheduler_create(taskname = "routine_gsod", rscript = paste0(script_path,"extract_latest.R"), 
                      schedule = "DAILY", starttime = starttime)
 
 # list currently scheduled tasks
@@ -52,7 +52,7 @@ taskscheduler_create(taskname = "extract_gsod_latest_daily", rscript = paste0(sc
 #tasks[grep("gsod",tasks$TaskName),]
 
 # delete test tasks
-#taskscheduler_delete("extract_gsod_latest")
+#taskscheduler_delete("extract_gsod_latest_daily")
 
 
 ################################################################################
