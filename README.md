@@ -1,4 +1,4 @@
-# git_alex-saunders
+# start_pakistan_heat
 Git repository
 series of R codes created for Start Network Pakistan heatwave DRF
 three main tasks: 
