@@ -1,12 +1,14 @@
 ################################################################################
-# extract_gsod_latestday.R
+# extract_latest_vm.R
 # Code to routinely extract gsod meteorological variables and calculate heatwave 
 # metrics for selected locations in Pakistan.
-# extract_gsod_latestday.R makes use of the package "GSODR" by Adam H Sparks to 
+# extract_latest_vm.R makes use of the package "GSODR" by Adam H Sparks to 
 # extract the latest GSOD data and write out as a csv file for selected stations.
+# It also makes use of "googledrive" to upload the files to a shared Google
+# Drive location.
 # Author: Alex Saunders
 # Date created: 17/12/2021
-# Date modified: 20/12/2021
+# Date modified: 21/12/2021
 ################################################################################
 
 
@@ -15,24 +17,28 @@
 ################################################################################
 
 rm(list=ls())
-
 print(paste0("*** started routine gsod extraction at ",Sys.time(), " ***"))
 
 packages = c("GSODR","lubridate","googledrive")
-
 for(package in packages){
+  print(paste0('** Loading package: ',package))
   if(!require(package,character.only = TRUE)) {
+    print("*** Package not found... installing")
     install.packages(package)
     if(!require(package,character.only = TRUE)) {
+      print("*** ERROR: Package not found")
     }else{
+      print('*** Package installed')
     }
   }
   library(package,character.only = TRUE)
+  print(paste0('*** Package loaded: ', package))
 }
+print('* END: Loading packages')
 
 # set input path
-input_path <- "C://Users/alexa/Documents/02_work/02_start/02_deliv/01_pk_heat/06_r/01_input/"
-output_path <- paste0(gsub("01_input","02_output",input_path),"gsod_routine/")
+input_path <- "/home/start/"
+output_path <- input_path
 
 
 # set fixed a and b parameters for calculation of relative humidity
@@ -105,7 +111,8 @@ gsod_data$hi_fah <- round (
   -42.379+(2.04901523*gsod_data$t_fah)+(10.14333127*gsod_data$RH)
   -(0.22475541*gsod_data$t_fah*gsod_data$RH)-(0.00683783*gsod_data$t_fah*gsod_data$t_fah)
   -(0.05481717*gsod_data$RH*gsod_data$RH)+(0.00122874*gsod_data$t_fah*gsod_data$t_fah*gsod_data$RH)
-  +(0.00085282*gsod_data$t_fah*gsod_data$RH*gsod_data$RH)-(0.00000199*gsod_data$t_fah*gsod_data$t_fah*gsod_data$RH*gsod_data$RH)
+  +(0.00085282*gsod_data$t_fah*gsod_data$RH*gsod_data$RH)
+  -(0.00000199*gsod_data$t_fah*gsod_data$t_fah*gsod_data$RH*gsod_data$RH)
   , 1)
 
 gsod_data$hi <- round (
@@ -146,9 +153,7 @@ for (l in 1:length(locs_check$STNID)) {
       gsod_data_fill[i, c("t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")] <- NA
       
     }
-    
   }
-  
 }
 
 # append the days with missing data back to the gsod data and order by date
@@ -158,23 +163,23 @@ gsod_data <- gsod_data[order(gsod_data$date, decreasing = T),]
 # add flag for missing day of data and last updated column
 gsod_data$missing <- 0
 gsod_data$missing[is.na(gsod_data$t_cel)] <- 1
-gsod_data$last_updated <- Sys.Date()
+gsod_data$last_updated <- Sys.time()
 
+
+################################################################################
+# Write outputs locally
+################################################################################
 
 # write out the data for all days until latest day - overwrites the previous days data
 write.csv(gsod_data, paste0(output_path,"start_gsod_year_to_date.csv"), row.names = F)
-print("latest day data was saved to ", output_path, " at ", Sys.time())
-
 
 # subset to the latest day and write out
 gsod_data_latestday <- gsod_data[which(gsod_data$date == latestday),]
 write.csv(gsod_data_latestday, paste0(output_path,"start_gsod_latest.csv"), row.names = F)
 
-# finish logging
+# logging
 print(paste0("latest day data was available for ", length(gsod_data_latestday$missing[which(gsod_data_latestday$missing == 0)])," out of total ",length(gsod_data_latestday$missing)," stations"))
 print(paste0("year to date and latest day data were saved to ", output_path))
-print(paste0("***** finished routine gsod extraction at ",Sys.time(), " *****"))
-
 
 
 ################################################################################
@@ -182,17 +187,19 @@ print(paste0("***** finished routine gsod extraction at ",Sys.time(), " *****"))
 ################################################################################
 
 # upload files to the google drive
-drive_upload(paste0(output_path,"start_gsod_year_to_date.csv"), path = "gsod_routine", name = "start_gsod_year_to_date", type = "spreadsheet", overwrite = T) #type = "text/csv"
-drive_upload(paste0(output_path,"start_gsod_latest.csv"), path = "gsod_routine", name = "start_gsod_latest", type = "spreadsheet", overwrite = T)
+drive_path <- "gsod_routine"
+drive_upload(paste0(output_path,"start_gsod_year_to_date.csv"), path = drive_path, name = "start_gsod_year_to_date", type = "spreadsheet", overwrite = T) #type = "text/csv"
+drive_upload(paste0(output_path,"start_gsod_latest.csv"), path = drive_path, name = "start_gsod_latest", type = "spreadsheet", overwrite = T)
+print(paste0("latest day data was uploaded to Google Drive path ", drive_path, " at ", Sys.time()))
 
 # allow access to the files for anyone with the link to the drive location
 drive_share_anyone("start_gsod_year_to_date")
 drive_share_anyone("start_gsod_latest")
+print(paste0("latest day data access permissions granted"))
+print(paste0("***** finished routine gsod extraction at ",Sys.time(), " *****"))
 
-
-
+rm(list=ls())
 
 ################################################################################
-# End
+# END
 ################################################################################
-
