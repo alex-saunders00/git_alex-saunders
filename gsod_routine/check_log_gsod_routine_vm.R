@@ -4,10 +4,10 @@
 # Pakistan.
 # Author: Alex Saunders
 # Date created: 21/12/2021
-# Date modified: 21/12/2021
+# Date modified: 22/12/2021
 ################################################################################
 
-rm(list=ls())
+#rm(list=ls())
 
 # show files in working directory
 input_path <- "/home/start/"
@@ -20,3 +20,4 @@ created
 # log file contents
 log <- read.csv("extract_latest_vm.log", header = F)
 log
+

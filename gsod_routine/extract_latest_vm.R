@@ -8,7 +8,7 @@
 # Drive location.
 # Author: Alex Saunders
 # Date created: 17/12/2021
-# Date modified: 21/12/2021
+# Date modified: 22/12/2021
 ################################################################################
 
 
@@ -16,7 +16,7 @@
 # Install packages and set up working environment
 ################################################################################
 
-rm(list=ls())
+#rm(list=ls())
 print(paste0("*** started routine gsod extraction at ",Sys.time(), " ***"))
 
 packages = c("GSODR","lubridate","googledrive")
@@ -95,8 +95,16 @@ if (nrow(locs_na) > 0) {
 lagdays <- 5
 latestyear <- as.integer(format(Sys.Date()-lagdays, "%Y"))
 latestday  <- Sys.Date()-lagdays
-print(paste0("attempting to download data for start of ", latestyear, " to ", latestday))
+print(paste0("attempting to download data for start of ", latestyear, " to current"))
 gsod_data <- get_GSOD(years = latestyear, station = locs_ok$STNID)
+print("gsod data downloaded")
+
+# check the latest day available in the gsod data, and if more recent than what
+# is assumed to be the latest day based on the expected lag time, then set this
+# to the latest day for the outputs
+latestday <- max(latestday, max(gsod_data$YEARMODA))
+print(paste0("gsod data available up to ", max(gsod_data$YEARMODA)))
+
 
 # add heatwave variables
 
@@ -126,6 +134,7 @@ keep <- c("loc","stationid","NAME","YEARMODA",
 gsod_data <- gsod_data[, keep]
 colnames(gsod_data) <- c("location","station_id","station_name","date",
                          "t_cel","tmax_cel","tmin_cel","td_cel","rh","hi_cel")
+print("heatwave variables computed")
 
 
 # check for each station that data exists for all days and fill with NAs where 
@@ -164,6 +173,7 @@ gsod_data <- gsod_data[order(gsod_data$date, decreasing = T),]
 gsod_data$missing <- 0
 gsod_data$missing[is.na(gsod_data$t_cel)] <- 1
 gsod_data$last_updated <- Sys.time()
+print("missing days filled with NA and flagged in column called missing")
 
 
 ################################################################################
@@ -179,7 +189,7 @@ write.csv(gsod_data_latestday, paste0(output_path,"start_gsod_latest.csv"), row.
 
 # logging
 print(paste0("latest day data was available for ", length(gsod_data_latestday$missing[which(gsod_data_latestday$missing == 0)])," out of total ",length(gsod_data_latestday$missing)," stations"))
-print(paste0("year to date and latest day data were saved to ", output_path))
+print(paste0("year to date and latest day data were saved locally to ", output_path))
 
 
 ################################################################################
@@ -198,7 +208,7 @@ drive_share_anyone("start_gsod_latest")
 print(paste0("latest day data access permissions granted"))
 print(paste0("***** finished routine gsod extraction at ",Sys.time(), " *****"))
 
-rm(list=ls())
+#rm(list=ls())
 
 ################################################################################
 # END

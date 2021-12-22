@@ -9,7 +9,7 @@
 # It calls the script "extract_latest_vm.R" which then does all the work.
 # Author: Alex Saunders
 # Date created: 21/12/2021
-# Date modified: 21/12/2021
+# Date modified: 22/12/2021
 ################################################################################
 
 
@@ -47,17 +47,25 @@ list.files(script_path, full.names = T)
 
 # create the scheduled task to run daily at the specified time
 cmd <- cron_rscript(paste0(script_path,"/extract_latest_vm.R"),
-                    log_append = F, log_timestamp = T)
+                    log_append = F, log_timestamp = F)
 
-cron_add(cmd, frequency = "daily", at = "12:00",
-         id = "gsod_routine_midday", 
-         description = "extract latest gsod data at 12PM daily run on vm",
+cron_add(cmd, frequency = "daily", at = "06:00",
+         id = "gsod_routine_0600", 
+         description = "extract latest gsod data at 06AM daily run on vm",
          ask = F)
 
 # list or remove existing cron jobs
 #cron_ls()
-#cron_rm(id = "job_7c0b1e9cec4260e80e4606b35966a072", ask = F) # use the id
+#cron_rm(id = "gsod_routine_midday", ask = F) # use the id
 
+# create the scheduled task to export the log file at the specified time
+cmd <- cron_rscript(paste0(script_path,"/export_log_gsod_routine.R"),
+                    log_append = F, log_timestamp = F)
+
+cron_add(cmd, frequency = "daily", at = "06:10",
+         id = "gsod_routine_logfile_0610", 
+         description = "export log file at 06AM daily run on vm",
+         ask = F)
 
 ################################################################################
 # END
